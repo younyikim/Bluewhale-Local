@@ -4,6 +4,17 @@
 
 ## Prerequisites
 
+To successfully follow this use case, you should have a basic understanding of the following AWS concepts:
+
+1. EC2
+2. IAM
+3. AWS Systems Manager (SSM)
+4. Amazom S3
+5. AWS Lambda
+6. AWS Step Functions
+7. AWS Elemental MediaConvert
+8. FFmpeg
+
 ## Workflow
 
 ## Step 1. Preparing the AWS Systems Manager Execution Environment
