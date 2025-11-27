@@ -1,4 +1,4 @@
-# Use case B : Bluewhale AMI로 VOD-SR 자동 시스템 만들기
+# Use case B : Building an Automated VOD-SR System with the Bluewhale AMI
 
 ## Architecture
 
@@ -6,19 +6,19 @@
 
 ## Workflow
 
-### Step 1. AWS Systems Manager 실행 환경 준비
+### Step 1. Preparing the AWS Systems Manager Execution Environment
 
-Bluewhale AMI 기반 EC2 인스턴스에서 FFmpeg을 원격 실행하기 위해서는 먼저 AWS Systems Manager(SSM)에서 해당 인스턴스를 제어할 수 있는 환경을 구성해야 합니다. 본 단계에서는 IAM Role 생성, 권한 설정, 그리고 Bluewhale AMI 기반 EC2 인스턴스 생성까지 VOD-SR 자동화를 위한 기본 기반을 구축합니다.
+To remotely run FFmpeg on an EC2 instance based on the Bluewhale AMI, you must first configure an environment that allows AWS Systems Manager (SSM) to manage that instance. In this step, you will create the required IAM role, set the necessary permissions, and launch an EC2 instance using the Bluewhale AMI to establish the foundational infrastructure for automated VOD-SR processing.
 
-#### 1. IAM Role 생성 (EC2-SSM-ROLE)
+#### 1. Creating an IAM Role (EC2-SSM-ROLE)
 
-SSM이 EC2 인스턴스를 관리할 수 있도록 전용 IAM Role을 생성합니다.
+Create a dedicated IAM role that allows AWS Systems Manager (SSM) to manage your EC2 instance.
 
-- **IAM -> Roles -> Create role** 이동
+- Navigate to **IAM -> Roles -> Create role**
 - **Trusted entitiy type** : AWS Service
-- **Use case -> EC2** 선택 후 다음 단계 진행
-- **Permissions policies**에서 **AmazonSSMManagedInstanceCore** 선택
-- Role 이름을 "**EC2-SSM-ROLE**"로 설정하고 생성
+- Select **Use case -> EC2**, then proceed to the next step
+- Under **Permissions policies**, select **AmazonSSMManagedInstanceCore**
+- Set the role name to "**EC2-SSM-ROLE**" and create the role
 
 <br/>
 <img src="../images/vod-sr/step1_iam_01.png" width="90%" style="display: block; margin: auto;">
@@ -30,13 +30,13 @@ SSM이 EC2 인스턴스를 관리할 수 있도록 전용 IAM Role을 생성합�
 <img src="../images/vod-sr/step1_iam_03.png" width="90%" style="display: block; margin: auto;">
 <br/>
 
-#### 2. Inline Policy 추가 (EC2-SSM-POLICY)
+#### 2. Adding an Inline Policy (EC2-SSM-POLICY)
 
-SSM Run Commnad 수행에 필요한 추가 권한을 부여합니다.
+Add additional permissions required for executing SSM Run Command.
 
-- **IAM → Roles → EC2-SSM-ROLE** 선택
-- **Add permissions → Create inline policy**
-- Policy editor에서 **JSON** 탭 선택 후 아래 내용 입력:
+- Go to **IAM → Roles → EC2-SSM-ROLE**
+- Select **Add permissions → Create inline policy**
+- In Policy editor, switch to the **JSON** tab and enter the following content:
 
   ```json
   {
@@ -55,7 +55,7 @@ SSM Run Commnad 수행에 필요한 추가 권한을 부여합니다.
   }
   ```
 
-- Policy 이름을 "**EC2-SSM-POLICY**"로 설정하고 생성
+- Set Policy name to "**EC2-SSM-POLICY**" and create the policy
 
 <br/>
 <img src="../images/vod-sr/step1_policy_01.png" width="90%" style="display: block; margin: auto;">
@@ -67,16 +67,17 @@ SSM Run Commnad 수행에 필요한 추가 권한을 부여합니다.
 <img src="../images/vod-sr/step1_policy_03.png" width="90%" style="display: block; margin: auto;">
 <br/>
 
-#### 3. Bluewhale AMI 기반 EC2 인스턴스 생성
-   생성한 IAM Role을 적용해 SSM 관리가 가능한 Bluewhale AMI 기반 인스턴스를 생성합니다.
+#### 3. Launching an EC2 Instance with the Bluewhale AMI
 
-- **EC2 → Launch instances**
-- **Application and OS Images** 검색창에 _Bluewhale_ 입력
-  - “Real-time AI Video Upscaling and Enhancement - Bluewhale (for Coupang)” 선택
-- Instance type: **g6e 계열** 선택
-- **Advanced details → IAM instance profile → EC2-SSM-ROLE** 선택
-- 나머지 설정 완료 후 인스턴스를 생성
-- 생성된 인스턴스의 **Instance ID** 확인
+Launch an EC2 instance based on the Bluewhale AMI and attach the IAM role created in the previous step, enabling the instance to be managed through SSM.
+
+- Go to **EC2 → Launch instances**
+- In the **Application and OS Images** search bar, enter _Bluewhale_
+  - Select “Real-time AI Video Upscaling and Enhancement - Bluewhale (for Coupang)”
+- Choose an instance type from the **g6e** family
+- Under **Advanced details → IAM instance profile**, select **EC2-SSM-ROLE**
+- Complete the remaining configuration and launch the instance
+- After creation, note the **Instance ID** of the EC2 instance
 
 <br/>
 <img src="../images/vod-sr/step1_ec2_01.png" width="90%" style="display: block; margin: auto;">
@@ -85,17 +86,17 @@ SSM Run Commnad 수행에 필요한 추가 권한을 부여합니다.
 <img src="../images/vod-sr/step1_ec2_02.png" width="90%" style="display: block; margin: auto;">
 <br/>
 
-### Step 2. AWS Systems Manager Run Command로 FFmpeg 기반 SR 작업 실행하기
+### Step 2. Executing FFmpeg-Based SR Processing Using AWS Systems Manager Run Command
 
-이 단계에서는 AWS Systems Manager(SSM)의 Run Command 기능을 활용해 Bluewhale AMI 기반 EC2 인스턴스에서 SR 작업을 원격으로 실행하는 방법을 설명합니다.
+In this step, you will use the Run Command feature of AWS Systems Manager (SSM) to remotely execute super-resolution (SR) processing on an EC2 instance running the Bluewhale AMI.
 
-#### 1. AWS CLI 설치를 위한 Run Command
+#### 1. Running a Command to Install the AWS CLI
 
-Bluewhale AMI 기반 EC2에서 S3 파일을 업로드/다운로드하기 위해 먼저 AWS CLI를 설치합니다.
+To upload or download files from Amazon S3 on the Bluewhale AMI–based EC2 instance, you must first install the AWS CLI.
 
-- **AWS Systems Manager → Run Command → Run a command**
-- **Command document**: AWS-RunShellScript 선택
-- Command Parameters에 아래 명령 입력:
+- Navigate toe **AWS Systems Manager → Run Command → Run a command**
+- For **Command document**, select AWS-RunShellScript
+- Enter the following commands in the Command Parameters field:
   ```bash
   sudo apt update
   sudo apt install -y unzip curl
@@ -104,9 +105,9 @@ Bluewhale AMI 기반 EC2에서 S3 파일을 업로드/다운로드하기 위해 
   sudo ./aws/install
   aws --version
   ```
-- **Target selection → Choose instances manually**에서 Step1에서 생성한 EC2 Instance ID 선택
-- **Run** 클릭
-- **Targets and outputs**에서 설치 로그를 확인
+- Under **Target selection → Choose instances manually**, select the EC2 Instance ID created in Step 1
+- Click **Run**
+- Review the installation results under **Targets and outputs**
 
 <br/>
 <img src="../images/vod-sr/step2_cli_01.png" width="90%" style="display: block; margin: auto;">
@@ -115,19 +116,19 @@ Bluewhale AMI 기반 EC2에서 S3 파일을 업로드/다운로드하기 위해 
 <img src="../images/vod-sr/step2_cli_02.png" width="90%" style="display: block; margin: auto;">
 <br/>
 
-#### 2. FFmpeg 기반 SR 실행을 위한 Run Command
+#### 2. Running a Command to Execute FFmpeg-Based SR Processing
 
-AWS CLI 설치가 완료되면 S3 파일 다운로드 → SR 처리 → 업로드까지 자동 실행되는 스크립트를 Run Command로 실행합니다.
+After installing the AWS CLI, you can use Run Command to automatically download the source file from S3, perform the SR (super-resolution) process, and upload the resulting file back to S3.
 
-- **AWS Systems Manager → Run Command → Run a command**
-- **Command document**: AWS-RunShellScript
-- Command Parameters에 아래 중 하나를 입력 :
-  - Model A 실행 스크립트
-  - Model B 실행 스크립트
-- Run Command 실행
-- **Targets and outputs → Instance ID** 선택해 Output 확인
+- Go to **AWS Systems Manager → Run Command → Run a command**
+- For **Command document**, select AWS-RunShellScript
+- In the Command Parameters field, enter one of the following :
+  - Model A execution script
+  - Model B execution scropt
+- Execute Run Command
+- Under **Targets and outputs → Instance ID**, review the command output
 
-#### 2-1. Model A 실행 스크립트
+#### 2-1. Model A execution script
 
 ```bash
 ### set env-variables
@@ -168,7 +169,7 @@ ffmpeg -y -i ${ORIG_FILENAME} -vf bdnvx_aws,bdsr_coupang_aws,noise=c0s=8:allf=t+
 aws s3 cp ./${SR_FILENAME} s3://${SR_BUCKET}/${SR_FILENAME}
 ```
 
-#### 2-2. Model B 실행 스크립트
+#### 2-2. Model B execution script
 
 ```bash
 ### set env-variables
@@ -209,16 +210,16 @@ ffmpeg -y -i ${ORIG_FILENAME} -vf bdsr_coupang_aws -c:v h264_nvenc -cq 13 -c:a c
 aws s3 cp ./${SR_FILENAME} s3://${SR_BUCKET}/${SR_FILENAME}
 ```
 
-#### 2-3. 실행 스크립트 변수 설명
+#### 2-3. Description of Script Variables
 
-| 변수명                | 설명                            |
-| --------------------- | ------------------------------- |
-| AWS_ACCESS_KEY_ID     | S3 업로드/다운로드용 Access Key |
-| AWS_SECRET_ACCESS_KEY | S3 업로드/다운로드용 Secret Key |
-| ORIG_BUCKET           | 원본 파일 S3 버킷               |
-| ORIG_FILENAME         | 원본 파일명                     |
-| SR_BUCKET SR          | 결과 파일 업로드용 S3 버킷      |
-| SR_FILENAME           | 생성된 SR 파일명                |
+| Variable NAme         | Description                                             |
+| --------------------- | ------------------------------------------------------- |
+| AWS_ACCESS_KEY_ID     | Access key used for uploading/downloading files from S3 |
+| AWS_SECRET_ACCESS_KEY | Secret key used for uploading/downloading files from S3 |
+| ORIG_BUCKET           | S3 bucket containing the source file                    |
+| ORIG_FILENAME         | Name of the source file                                 |
+| SR_BUCKET SR          | S3 bucket for uploading the SR output file              |
+| SR_FILENAME           | Name of the generated SR file                           |
 
 <br/>
 <img src="../images/vod-sr/step2_sr_01.png" width="90%" style="display: block; margin: auto;">
