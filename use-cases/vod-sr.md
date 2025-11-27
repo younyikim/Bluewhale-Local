@@ -67,7 +67,7 @@ SSM Run Commnad 수행에 필요한 추가 권한을 부여합니다.
 <img src="../images/vod-sr/step1_policy_03.png" width="90%" style="display: block; margin: auto;">
 <br/>
 
-3. Bluewhale AMI 기반 EC2 인스턴스 생성
+#### 3. Bluewhale AMI 기반 EC2 인스턴스 생성
    생성한 IAM Role을 적용해 SSM 관리가 가능한 Bluewhale AMI 기반 인스턴스를 생성합니다.
 
 - **EC2 → Launch instances**
